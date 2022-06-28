@@ -498,3 +498,240 @@ typedef void(*PtoF)(int); // equivalent to "using PtoF = void(*)(int);"
 21. Avoid uninitialized variables.
 22. Use an alias to define a meaningful name for a built-in type in cases in which the built-in type used to represent a value might change.
 23. Use an alis to define synonyms fo rtypes; use enumerations and classes to define new types.
+
+# 7. Pointers, Arrays, and References
+
+## Introduction
+
+We can refer to an object by name, but in C++ (most) object "have identity". That is, they reside at a specific address in memroy, and an object can be accessed if you know its address and its type. The language constructrs for holding and using addresses are pointers and references.
+
+## Pointers
+
+### Introduction
+
+Pointers are variables that hold the address of another variable. Pointers are used to point to another variable in the memory.
+
+A pointer that points to a variable of type ```T``` is built using ```T*``` and the compiler will allocate the same amount of memory for the pointer, as it did for the variable of the type it points to.
+
+For example:
+
+```C++
+int a = 5;
+int* p = &a;
+```
+
+If an integer gets 4 bytes allocated, the pointer ```p``` will also get 4 bytes allocated.
+
+The notation ```&a``` returns the address of the variable ```a```.
+The notation ```int*  p``` represents a pointer to an integer.
+
+The most important operation on pointers is called *dereferencing*. This means getting the value that the pointer is pointing to:
+
+```C++
+int a = 5;
+int*p = &a;
+cout << *p << endl;
+// Ouptut: 5
+```
+
+We will now receive 5 since we have dereferenced the pointer ```p```.
+
+The notation ```*p``` means *dereferencing* the pointer ```p```, meaning that you receive the value that the pointer ```p``` is pointing to.
+
+Pointers can change what value they are pointing to. A pointer can point to ```a``` and then you can change it to point to ```b``` (unless it's ```const```, we'll get to that later).
+
+#### Book
+
+For a Type ```T```, ```T*``` is a type "pointer to ```T```". That is, a variable of type ```T*```, can hold the address of an object of type ```T```. For example:
+
+```C++
+char c = 'a';
+char* p = &c;  // p holds the address of c; & is the address-of operator
+```
+
+or graphically:
+
+![Pointer displayed graphically](ScreenshotsForNotes/SectionII/Chapter7/pointer_displayed_graphically.PNG)
+
+The fundamental operation of a pointer is ***dereferencing***, that is, ***refereing to the object pointed to by the pointer***. This operation is also called *indirection*. The dereferencing operator is (prefix) unary ```*```. For example:
+
+```C++
+char c = 'a';
+char* p = &c;  // p holds the address of c; & is the address-of operator
+char c2 = *p;  // c2 == 'a'; * is the dereference operator
+```
+
+The object pointed to by ```p``` is ```c```, and the value stored in ```c``` is ```'a'```, so the value of ```*p``` assigned to ```c2``` is ```'a'```.
+
+
+The ```*```, meaning "pointer to", is used as a suffix for a type name. Unfortunately, pointers to arrays and pointers to functions need a more complicated notation:
+
+```C++
+int* pi; // pointer to int
+char** ppc; // pointer to pointer to char
+int* ap[15]; // array of 15 pointers to ints
+int (*fp)(char*); // pointer to function taking a char* argument; returns an int
+int* f(char*); // function taking a char* argument, returns a pointer to int
+```
+
+### ```void*```
+
+The ```void*``` type is used when we don't know the type of the object that a pointer is pointing to. You can convert any type of pointer to a ```void*``` pointer, however, you can't convert a ```void*``` poitner to any type.
+
+#### Book
+
+In low-level code, we occasionally need to store or pass along an address of a memory location without actually knownig what type of object is stored there. A ```void*``` is used for that. ***You can read ```void*``` as "pointer to an object of unkonwn type".***
+
+***A pointer to any type of object can be assigned to a variable of type ```void*```,*** but a pointer to function or a pointer to member cannot. In addition, a ```void*``` can be assigend to another ```void*```, ```void*```s can be compared for equality and inequality, and a ```void*``` cna be explicitly converted to another type. Other operations would be unsafe because the compiler cannot konw hwat kind of object is really pointed to. Consequently, other operations result in compile-time errors. To use a ```void*```, we must explicitly convert it to a pointer to a specific type. For example:
+
+```C++
+void f(int* pi) {
+    void* pv = pi; // ok: implicit conversion of int* to void*
+    *pv; // error: can't dereference void
+    ++pv; // error: can't increment void* (the size of the object pointed to is unknown)
+
+    int* pi2 = static_cast<int*>(pv); // explicit conversion back to int*
+
+    double* pd1 = pv; // error
+    double* pd1 = pi; // error
+    double* pd3 = static_cast<double*>(pv) // unsafe
+}
+```
+
+***It is not safe to use a pointer that has been converted ("cast") to a type that differes from the type of the object pointed to***. For example, a machine may assume that every ```double``` is alllocated on a 8-byte boundary. If so, strange behavior could arise if ```pi``` pointer to an ```int``` that wasn't allocated that way. This form of explicit type conversion is inherently unsafe and ugly. Consequently, the notation used, ```static_cast```, was designed to be ugly and easy to find in code.
+
+***The primary use for void\**** is for passing pointers to function that are not allowed to make assumptions about the type of the object and for returning untyped objcects from functions. To use such an object, we must use explicit type conversion.
+
+***Functions using ```void*``` pointer typically exist at the very lowest level of the system***, where real hardware resources are manipulated. For example:
+
+```C++
+void* my_alloc(size_t n);  // allocate n bytes from my special heap
+```
+
+***Occurrences of ```void*```s at higher levels of the system should be viewed with great suspicion because they are likely indicators of design errors.*** Where used for optimization, ```void*``` can be hidden behind a type-safe interface.
+
+Pointers to functions and pointers to memmbers cannot be assigned to ```void*```s.
+
+### ```nullptr```
+
+The ```nullptr``` value is assigned to pointers that don't yet point to anything.
+For example:
+
+```C++
+int* a = nullptr;
+```
+
+#### Book
+
+The literal ```nullptr``` represents the null pointer, that is, ***a pointer that does not point to an object***. It can be assigned to any pointer type, but not to other built-in types:
+
+```C++
+int* pi = nullptr;
+double* pd = nullptr;
+int i = nullptr; // error: i is not a pointer
+```
+
+***There is just one ```nullptr```,*** which can be used for every pointer type, rather than a null pointer for each pointer type.
+
+## Arrays
+
+### Introduction
+
+In order to build an array in C++ you use the following notation:
+
+```C++
+T array[size];
+```
+
+where ```T``` is the type of elements that are accepted inside the array. Example:
+
+```C++
+int array[5];
+```
+
+if the compiler allocates 4 bytes for an ```int```, then it will allocated 20 bytes for an array of 5 integers.
+
+#### Book
+
+***For a type ```T```, ```T[size]``` is the type "array of ```size``` elements of type ```T```".*** The elements are indexed from ```0``` to ```size-1```. For example:
+
+```C++
+float v[3]; // an array of three floats: v[0], v[1], v[2]
+char* a[32]; // an array of 32 pointers to char: a[0]...a[31]
+```
+
+You can access an array using the subscript operator, ```[]```, or through a pointer (using operator ```*``` or operator ```[]```). For example:
+
+```C++
+void f() {
+    int aa[10];
+    aa[6] = 9; // assigns to aa's 7th element
+    int x = aa[99]; // undefined behavior
+}
+```
+
+***Access out of range of an array is undefined and usually disastrous.*** In particular, run-time range checking is neither guaranteed nor common.
+
+***An array is C++'s fundamental way of representing a sequence of objects in memory***. If what you want is a simple fixed-length sequence of objects of a given type in memory, an array is the ideal solution. For every other need, an array has serious problems.
+
+An array can be allocated statically, on the stack, and on the free store. For example:
+
+```C++
+int a1[10]; // 10 ints in static storage
+
+void f() {
+    int a2[20]; // 20 ints on the stack
+    int* p = new int[40]; // 40 ints on the free store
+}
+```
+
+***The C++ built-in array is an inherently low-level facility that should primarily be used inside the impementation of higher-level, better-behaved, data strucutres*** such as the standard-library ```vector``` or ```array```. There is no array assignment, and the name of an array implicitly converts to apointer to its first element at the slightest provocation. IN particular, ***avoid arrays in interfaces*** (e.g., as function arguments) because the implicit conversion to pointer is the root cause of many common errors in C code and C-style C++ code. If you allocate an array on the free store, be sure to ```delete[]``` its pointer once only and only after its last use. That's most easily and most reliably done by having the lifetime of the free-store array controlled by a resource handle. If you allocate an array statically or on the stack, be sure never to ```delete[]``` it.
+
+***One of the most widely used kinds of arrays is a zero-terminated array of ```char```.*** That's the way C stores strings, so a zero-terminated array of ```char``` is often called a C-```style``` string. C+ string literals follow that conveion, and some standard-library function (e.g. ```strcpy()``` and ```strcmp()```) rely on it. Often, a ```char*``` or a ```const char*``` is assumed to point to a zero-terminated sequence of characters.
+
+### Array Initializers
+
+An array can be initialized by a list of values. For example:
+
+```C++
+int v1[] = {1, 2, 3, 4};
+char v2[] = {'a', 'b', 'c', 0};
+```
+
+When an array is declared without a specific size, but with an initializer list, the size is calculated by counting the elements of the initializer list. Consequently, ```v1``` and ```v2``` are of type ```int[4]``` and ```char[4]```, repsectively. If a size is explicitly specified, it is an error to give surplus elements in an initalizer list. For example:
+
+```C++
+char v3[2] = {'a', 'b', 0} // error: too many initializers
+char v4[3] = {'a', 'b', 0}; // OK
+```
+
+If the initailizer supplies too few elements for an array, ```0``` is used for the rest. For example:
+
+```C++
+int v5[8] = {1, 2, 3, 4};
+```
+
+is equivalent to
+
+```C++
+int v5 = {1, 2, 3, 4, 0, 0, 0, 0};
+```
+
+There is no built-in copy operation for arrays. You cannot initalize one array with another (not even of exactly the same type), and there is no array assignment:
+
+```C++
+int v6[8] = v5; // error: cna't copy an array (cannot assign an int* to an array)
+v6 = v5; // error: no array assignment
+```
+
+Similarly, you can't puss arrays by value.
+
+When you need assignemnt to a collection of objects, use a ```vector```, an ```array```, or a ```valarray``` instead. An array of characters can be conveniently initalized by a string literal.
+
+### String Literals
+
+A *string literal* is a character sequence enclosed within double quotes:
+
+```"this is string"```
+
+A string literal contains one more character than it appears to have; it is terminated by the null character, ```'\0'```, with the value ```0```. For example:
