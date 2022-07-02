@@ -574,7 +574,7 @@ int (*fp)(char*); // pointer to function taking a char* argument; returns an int
 int* f(char*); // function taking a char* argument, returns a pointer to int
 ```
 
-### ```void*```
+## ```void*```
 
 The ```void*``` type is used when we don't know the type of the object that a pointer is pointing to. You can convert any type of pointer to a ```void*``` pointer, however, you can't convert a ```void*``` poitner to any type.
 
@@ -612,7 +612,7 @@ void* my_alloc(size_t n);  // allocate n bytes from my special heap
 
 Pointers to functions and pointers to memmbers cannot be assigned to ```void*```s.
 
-### ```nullptr```
+## ```nullptr```
 
 The ```nullptr``` value is assigned to pointers that don't yet point to anything.
 For example:
@@ -689,7 +689,7 @@ void f() {
 
 ***One of the most widely used kinds of arrays is a zero-terminated array of ```char```.*** That's the way C stores strings, so a zero-terminated array of ```char``` is often called a C-```style``` string. C+ string literals follow that conveion, and some standard-library function (e.g. ```strcpy()``` and ```strcmp()```) rely on it. Often, a ```char*``` or a ```const char*``` is assumed to point to a zero-terminated sequence of characters.
 
-### Array Initializers
+## Array Initializers
 
 An array can be initialized by a list of values. For example:
 
@@ -728,10 +728,548 @@ Similarly, you can't puss arrays by value.
 
 When you need assignemnt to a collection of objects, use a ```vector```, an ```array```, or a ```valarray``` instead. An array of characters can be conveniently initalized by a string literal.
 
-### String Literals
+## String Literals
 
 A *string literal* is a character sequence enclosed within double quotes:
 
 ```"this is string"```
 
 A string literal contains one more character than it appears to have; it is terminated by the null character, ```'\0'```, with the value ```0```. For example:
+
+```cpp
+sizeof("Bohr") == 5
+```
+
+**The type of a string literal is "array of the appropriate number of ```const``` characters," so ```"Bohr"``` is of type ```const char[5]```.**
+
+If we want a string that we a reguaranteed to be able to modify, we must palce the characters in a non-```const``` array:
+
+```cpp
+void f(){
+    char p[] = "Zeno"; // p is an array of 5 char
+    p[0] = 'R';
+}
+```
+
+**A string literal is statically allocated so that it is safe to return one from a function**. For example:
+
+```cpp
+const char* error_message(int i) {
+    // ...
+    return "range error";
+}
+```
+
+The memory holding ```"range error"``` will not go away after a call of ```error_message()```.
+
+**Wheter two identical string literals are allocated as one array or as two is implementation-defined**. For example:
+
+```cpp
+const char* p = "Heraclitus";
+const char* q = "Heraclitus";
+
+void g() {
+    if (p == q) cout <<a "one!\n"; // the result is implementation-defined
+}
+```
+
+**Note that ```==``` compares addresses (pointer values) when applied to pointers, and not the values pointed to.**
+
+The empty stirng is written as a pair of adjacent double quotes, ```""```, and has the type ```const char[1]```. The one character of the empty string is the terminating ```'\0'```.
+
+The backslash convention for representing nongraphic characters can alos be used within a string. This makes it possible to represent the double quote (```"```) and the escape character backslash (```\```)) within a string. The most common such character by far is the newline characdter, ```'\n'```. 
+
+**Long strings ca be broken by whitespace to make the program text neater:**
+
+```cpp
+char alpha[] = "abcdefghijklmnopqrstuvwxyz"
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+```
+
+The compiler will concatenate adjacent strings, so ```alpha``` coul quivalently ahve been initialized by a single string.
+
+## Raw Character Strings
+
+If you need a lot of backslashes in your string you can use raw character strings.
+A raw string literal is a string literal where a backslash is just a backslash (and a doubl equote is just a double quote). Raw string literals use the ```R"(ccc)"``` notation for a sequence of characeers ```ccc```. The initial ```R``` is there to distinguis hraw string literals from ordinary string literals. The parentheses are there to allow ("unescaped") double quotes.
+
+## Larger Character Sets
+
+A string with the prefix ```L```, such as ```L"angst"```, is a stirng of wide characters. Its type is ```const wchar_t[]```. Similarly, a string with the prefix ```LR```, such as ```LR"angst"```, is a raw string of wide characters of type ```const wchar_t[]```. Such a string is termianted by a ```L'\0'``` character.
+
+There are six kinds of character literals supporting Unicode (*Unicode literals*). This sounds excessive, but there are three major encodings of Unicode: UTF-8, UTF-16, and UTF-32. For each of these three alternatives, bot hraw and "ordinary" strings are supported. All three UTF encodings support all Unicode characters, sow hich you use dpeends on the ystsem you need to fit into. Essentially all internet applications (e..g, brwosers and email) rely on one or more of these encodings.
+
+UTF-8 is a variable-width encodign: common characters fit into 1 byte, less frequently used characters (by some estimate of use) into 2 bytes, and rarer characteres into 3 or 4 bytes. In particular, the ASCII characters fit into 1 bytes with the same encodings (integer values) in UTF-8 as in ASCII. The various Lation alphabets, Greek, Cyrillic, Hebrew, Arabic, and more fit into 2 bytes.
+
+A UTF-8 string is terminated by ```'\0'```, a UTF-16 string by ```u'\0'```, and a UTF-32 string by ```U'\0'```.
+
+We can represent an ordinary English character string in a variety of ways. Consider a file name using a backslash as the separator:
+
+```cpp
+"folder\\file" // implementation character set string
+R"(folder\file)" // implementation character raw set string
+u8"folder\\file" // UTF-8 string
+u8R"(folder\file)" // UTF-8 raw string
+u"folder\\file" // UTF-16 string
+uR"(folder\file)" // UTF-16 raw string
+U"folder\file" // UTF-32 string
+UR"(folder\file)" // UTF-32 raw string
+```
+
+If printed, these strings will all look the same, but except for the "plain" and UTF-8 stirngs their internal representaitons are likely to differ. Obviously, the real purpose of Unicode stirngs is to be able to put Unicdoe characters into them. For example:
+
+```cpp
+u8"The official vowels in Danish are: a, e, i, o, u, \u00E6, \000F8, \u00E5 and y."
+```
+
+**The hexadecimal number after the ```\u``` is a Unicode code point.** Such as code point is independent of the encoding used and will in fact have different representations (as bits in bytes) in different encodings.
+
+**The order of the ```u```-s and ```R```-s and their cases are significant: ```RU``` and ```Ur``` are not valid string prefixes.**
+
+## Pointers into arrays
+
+When building a pointer to an array, you are buildling a pointer to the first item of the array. If you increment the pointer with 1, you will increment the address of the pointer with the number of bytes allocated for the type of data that the array is taking in. So, for example, if you have an array of integers and your system is allocating 4 bytes for every integer. If you build a pointer to the array, you will be buildling a pointer to the first item of the array. Once you increment the pointer with 1, you would actually increment it with 4 bytes, in order to get to the next item inside the array. Trying to access items outside the range of the array is very dangerous in C++.
+
+#### Book
+
+In C++, pointers and arrays are closely related. The name of an array can be used as a pointer to its initial element. For example:
+
+```c++
+int v[] = {1, 2, 3, 4};
+int* p1 = v; // pointer to initial element (implicit conversion)
+int* p2 = &v[0]; // pointer to initial element
+int* p3 = v + 4; // pointer to one-beyond-last element
+```
+
+or graphically:
+
+![Pointers to arrays displayed graphically](ScreenshotsForNotes/SectionII/Chapter7/pointers_to_arrays_displayed_graphically.PNG)
+
+Taking a pointer to the element one beyond the end of an array is guaranteed to work. This is important for many algorithms. However, since such a pointer does not in fact point to an element of the array, it may not be used for reading or writing. The result of taking the address of the element before the initial element or beyond one-past-the-last element is undefined and should be avoided. For example:
+
+```cpp
+int* p4 = v - 1; //before the beginning, undefined: don't do it
+int* p5 = v + 7; // beyond the end, undefined: don't do it
+```
+
+## Navigating arrays
+
+Efficient and elegant access to arrays is the key to many algorithms. Access can be achieved either thorugh a pointer to an array plus an index or through a pointer to an element. For example:
+
+```cpp
+void fi(char v[]){
+    for (int i = 0 ; v[i] != 0; ++i)
+        use(v[i]);
+}
+
+void fp(char v[]){
+    for(char*p = v; *p!=0; ++p)
+        use(*p);
+}
+```
+
+The prefix ```*``` operator dereferneces a pointer so that ```*p``` is the cahracter pointed to by ```p```, and ```++``` increments the pointer so that it refers to the netxt elemnet of the array.
+
+There is no inherente reason why one version should be faster than the other. With modern compilers, identical code should be (and usually is ) generated for both examples. Programmers can choose between the versions on logical and aesthetic grounds.
+
+The result of applying the artihemic operators ```+```, ```-```, ```++```, or ```--``` to pointers depends on the type of the object pointed to. When an arithmetic operator is applied to a pointer ```p``` of type ```T*```, ```p``` is assumed to point to an element of an array of ojbects of type ```T```; ```p+1``` points to the next element of htat array, and ```p-1``` points to the previous element. This implies that the integer value of ```p+1``` will be ```sizeof(T)``` larger thatn the integer value of ```p```.
+
+Subtraction of pionter sis deifined only whe nboth poitners point to elements of the sam array (although the language has no fast way of ensureing that is the case). When subtracting a pointer ```p``` from another pointer ```q```, ```q-p```, the result is the number of array elements in the sequence ```[p:q)``` (an integer). One can add an integer to a pointer or subtract an integer from a pionter; in both cases, the result is a pointer value. If that value edoes not point to an element of the same array as the original pointer or one beyond, the result of using that values is undefined. Example:
+
+```cpp
+void f(){
+    int v1[10];
+    int v2[10];
+
+    int i1 = &v1[5] - &v1[3]; // i1 = 2
+    int i2 = &v1[5] - &v2[3]; // undefined
+
+    int* p1 = v2 + 2; // p1 = &v2[2]
+    int* p2 = v2 - 2; // *p2 undefined
+}
+```
+
+***Complicated pointer arithmetic is usually unnecessary and best avoided. Addition of pointers makes no sense and is not allowed.***
+
+## Multidimensional arrays
+
+Multidimensional arrays are repsented as arrays of arrays; a 3-by-5 array is declared like this:
+
+```cpp
+int ma[3][5]; // 3 arrays with 5 ints each
+```
+
+We can initialize ```ma``` like this:
+
+```cpp
+void init_ma() {
+    for(int i = 0; i!= 3;i++)
+        for(int j = 0 ; j != 5; j++)
+            ma[i][j] = 10 * i + j;
+}
+```
+
+or graphically:
+
+![Multidimensional array graphically represented](ScreenshotsForNotes/SectionII/Chapter7/multidimensional_array_graphically_represented.PNG)
+
+In particular, there is no single object in memory that is the matrix ```ma``` - only the elements are stored. The dimensions ```3``` and ```5``` exist in the compiler source only. When we write code, it is our job to remember them some-how and supply the dimensions where needed.
+
+The comma notation used for array bounds in some languages cannot be used in C++ because the comma ```(,)``` is a sequenceing operator. Fortunatenly, most mistakes are caught by the compiler. For example:
+
+```cpp
+int bad[3, 5]; // error: comma not alllowed in constant expression
+int good[3][5]; // 3 arrays with 5 ints each
+int bad_again = good[1, 4]; // error: int initialized by int* (good [1, 4] means good[4], which is an int*)
+int good_again = good[1][4];
+```
+
+## Passing arrays
+
+Arrays cannot directly be pased by value. INstead, an array is passed as a pointer to its first element. For example:
+
+```cpp
+void comp(double arg[10]){
+    for(int i = 0 ; i < 10 ; i++){
+        arg[i] += 99;
+    }
+}
+
+void f(){
+    double a1[10];
+    double a2[5];
+    double a3[100];
+    
+    comp(a1);
+    comp(a2); // bad
+    comp(a3); // uses only the first 10 elements
+}
+```
+
+This code looks sane, but it is not. The code compiles, but the call ```comp(a2)``` will write beyond the bounds of ```a2```. Also, anyone who guessed that the array was passed by value will be disappointed: the writes to ```arg[i]``` are writes directly to the elements of ```comp()```'s argument, rather than to a copy. The function could equivalently have been written as:
+
+```cpp
+void comp(double* arg)
+{
+    for(int i = 0 ; i != 10; ++i)
+        arg[i] += 99;
+}
+```
+
+When used as a function argument, the first dimension of an array is simply treated as a pointer. Any array bound specified is simply ignored. This impiles that if you want to pass a sequence of elements without lsoing size information, you should not pass a built-in array. Instaed, you can place the array inside a class as a member (as is done for ```std::array```) or define a calss that acts as a handle (as is done for ```std::string``` and ```std::vector```).
+
+If you insist on using arrays directly, you will have to deal with bugs and confusino without geting noticeable advantages in return. Consider defining a function to manipulate a two-dimensional matrix. If the dimensions are known at compile time, there is no problem:
+
+```cpp
+void print_m35(int m[3][5]){
+    for(int i = 0 ; i < 3 ; i++){
+        for(int j = 0 ; j < 5 ; j++){
+            cout << m[i][j] << '\t';
+        }
+        cout << "\n";
+    }
+}
+```
+
+A matrix represented as a multidimensional array is passed as a pointer.
+
+## Pointers and ```const```
+
+C++ offers two related meanings of "constant":
+
+* ```constexpr```: evaluate at compile time
+* ```const```: do not modify in this scope
+
+Basically, ```constexpr```'s role is to enable and ensure compile-time evaluation, whereas ```const```'s primary role is to specify immutability in interfaces.
+
+Many objects don't have their values changed after initialization:
+
+* Symbolic constants lead to more maintainable code than using literals directly in code.
+* Many pointers are often read through but never written through.
+* Most function paramters are read but not written to.
+
+To express this notion of immutability after initialization, we can add ```const``` to the definition of an object. For example:
+
+```cpp
+const int model = 90; // model is a const
+const int v[] = {1, 2, 3, 4}; // v[i] is a const
+const int x; // error: no initializer
+```
+
+***Because an object declared ```const``` cannot be assigend to, it must be initialized.***
+
+***Note that ```const``` modifies a type; it restricts the ways in which an object can be used, rather than specifying how the constant is to be allocated.***
+
+When using a pointer, two object are involved: the pointer itself and the object pointed to. "Prefixing" a declaration of a pointer with ```const``` makes the object, but not the pointer, a constant. To declare a pointer itself, rather than the object pointed to, to be a constant, we use the declarator operator ```*const``` instead of plain ```*```. For example:
+
+```cpp
+void f1(char* p){
+    char s[] = "Grom";
+
+    const char* pc = s; // pointer to constant
+    pc[3] = 'g'; // error: pc points to constant
+    pc = p; // OK
+
+    char *const cp = s // constant pointer
+    cp[3] = 'a'; // OK
+    cp = p; // error: cp is constant
+
+    const char *const cpc = s; // const pointer to const
+    cpc[3] = 'a'; // error: cpc points to constant
+    cpc = p; // error: cpc is constant
+}
+
+```
+
+***The declarator operator that makes a pionter constnat is ```*const```.*** There is no ```const*``` declarator operator, so a ```const``` appearing before the ```*``` is taken to be part of the base type. For example:
+
+```cpp
+char *const cp; // const pointer to char
+char const* pc; // pointer to const char
+const char* pc2; // pointer to const char
+```
+
+Some people find it helpful to read such declarations right-to-left, for example "```cp``` is a ```const``` pointer to a ```char```" and "```pc2``` is a pointer to a ```char const```".
+
+An object that is a constant when accessed through one pointer may be variable hwne accessed in other ways. This is particularly sueful for function arguments. By declaring a pointer argument ```const```, the function is prohibited from modifying the object pointed to. For example:
+
+```cpp
+const char* strchr(const char* p, char c); // find first occurrence of c in p
+char* strchr(char* p, char c); // find first occurrence of c in p
+```
+
+The first version is used for strings where the elements mustn't be modified and retunrs a pointer to ```const``` that doesn't allow modification. The second version is used for mutable strings.
+
+You can assign the address of a non-```const``` variable to a pointer to constant because no harm can come from that. However, the address of a constant cannot be assigned to an unrestricted point because this wuold allow sthe object's value to be chagned. For example:
+
+```cpp
+void f4(){
+    int a = 1;
+    const int c = 2;
+    const int* p1 = &c; // OK
+    const int* p2 = &a; // OK
+    int* p3 = &c; // error: initialization of int* with const int*
+    *p3 = 7; // try to change the value of c 
+}
+```
+
+## Pointers and ownership
+
+***A resource is somethign that has to be acquired and later released.***
+
+Memory acquired by ```new``` an released by ```delete``` and files opened by ```fopen()``` and closed by ```fclose()``` are examples of resources where the most direct handle to the resource is a pointer. This can be most confusing because a pointer is easily passed around in a program, and there is nothing in the type system that distinguishes a pointer that owns a resource from one that does not.
+
+## References
+
+> An lvalue is something that points to a specific memory location. On the other hand, a rvalue is something that doesn't point anywhere.
+
+A pointer allows us to pass potentially large amounts of data around at lwo cost: instead of copying the data we simply pass its adddress as a pointer value. The type of the pointer determines what can be done to the data through the pointer. Using a pointer differs from using the name of an object in a few ways:
+
+* We use a different syntax, for example ```*p``` instead of ```obj``` and ```p->m``` rather than ```obj.m```.
+* We can make a pointer point to different objects at different times.
+* We must be more careful when using pointers than wehn using an object directly: a pointer may be a ```nullptr``` or point to an object that wasn't the one we expected.
+
+These differences can be annoying; for example, some programmers find ```f(&x)``` ugly compared to ```f(x)```. Worse, managing pointer varaibles with varying values and protecting code against the possibility of ```nullptr``` can be a significant burden. Finally, when we want to overload an operator, say ```+```, we want to write ```x+y``` rather than ```&x + &y```. The langauge mechanism addressing these problems is called a ***reference***. 
+
+***Like a pointer, a reference is an alias for an object, is usually implemented to hold a machine address of an object, and does not impose performance overhead compared to pointers, but it differs from a pointer in that:***
+
+* You access a reference with exactly the same syntax as the name of an object
+* A reference always refers to the object to which it was initialized
+* There is no "null reference," and we may assume that a reference refers to an object.
+
+***The main use of refenreces is for specifying arguments and reutrn values for functions in general and for overlaoded operators in particular.***
+
+To reflect the ```lvalue/rvalue``` and ```const/non-const``` distinctions, there are three kidns of references:
+
+* *lvalue references:* to refer to objects whose value we want to change
+* *```const``` references:* to refer to objects whose value we do not want to change (e.g., a constant)
+* *rvalue references:* to refer to objects whose value we do not need to preserver after we have used it (e.g., a temporary)
+
+Collectively, they are called *references*. The first two are both called *lvalue references*.
+
+## Lvalue references
+
+***In a type name, the notation ```X&``` means "refernce to ```X```".*** It is used for references to lvalues, so it is often called an *lvalue reference*. For example:
+
+```cpp
+void f() {
+    int var = 1;
+    int& r { var }; // r and var now refer to the same int
+    int x = r; // x becomes 1
+
+    r = 2 ;// var becomes 2
+}
+```
+
+To ensure that a refenrece is a name for something (that is, that it is bound to an boject), we must initialized the reference. For example:
+
+```cpp
+int var = 1;
+int& r1 { var }; // OK: r1 initialized
+int& r2; // error: initializer missing
+extern int& r3; // OK: r3 initialied elsewhere
+```
+
+Initialization of a reference is something quite different from assignment to it. Despite appearances, ***no operator operators on a reference***. For example:
+
+```cpp
+void g(){
+    int var = 0;
+    int& rr { var };
+    ++rr; // var is incremented to 1
+    int* pp = &&rr; // pp points to var
+}
+```
+
+Here, ```++r``` does not increment the refenrece ```rr```; rather, ```++``` is applied to the ```int``` to which ```rr``` refers, that is, to ```var```. Consequently ,the value of a reference cannot be changeed after initialization; it always refers to the object it was initialized to denote. To get a pointer to the object denoted by a reference ```rr```, we can write ```&&rr```. Thus, we cannot have a pointer to a reference. Furthermore, we cannot define an array of references. In that sense, a reference is not an object.
+
+The obvious implementation of a reference is as a (constnat) pointer that is dereferenced each tiem it is used. It doesn't do much harm to htink about references that way, as long as one remembers that a reference isn't an boject that can be manipulated the way a pointer is:
+
+![Lvalue reference vs pointer](ScreenshotsForNotes/SectionII/Chapter7/lvalue_reference_graphically_explained.PNG)
+
+In some cases, the compiler can optimize away a reference so that there is no object representing that reference at run time.
+
+Initialization of a reference is trivial when the initializer is an lvalue (an object whose address you can take). The initializer for a "plain" ```T&``` must be an lvalue of type ```T```.
+
+The initializer for a ```const T&``` need not be an lvalue or even of type ```T```. In such cases:
+
+1. First, implicit type conversion to ```T``` is applied if necessary
+2. Then, the resulting value is placed in a temporary variable of type ```T```.
+3. Finally, this temporary variable is used as the value of the initializer.
+
+Consider:
+
+```cpp
+double& dr = 1; // error: lvalue needed
+const double& cdr { 1 } ; // OK
+```
+
+The interpretation of this last initialization might be:
+
+```cpp
+double temp = double { 1 }; // first create a temporary with the right value
+const double& cdr { temp }; // then use the temporary as the initializer for cdr
+```
+
+A temporary created to hold a reference initializer persists until the end of its reference's scope. References to variables and references to constants are distinguished because introducing a temproary for a variable would have been highly error-prone; an assignment to the variable would become an assignment to the - soon-to-disappear - temporary. No such problem exists for references to constants, and references to constants are foten important as function arguments.
+
+A refernece can be used to specify a function argument so that the function can cahnge the value of an object passed to it. For example:
+
+```cpp
+void increment(int&& aa) {
+    ++aa;
+}
+
+void f() {
+    int x=  1;
+    increment(x); // x = 2
+}
+```
+
+The semanctics of argument passing are defined to be those of initialization, so when calle,d ```increment```'s argument ```aa``` becamse another name for ```x```. ***To keep a program readalbe, it is often best to avoid functions that modify their arguments. Instead, you can retunr a value from the function explicitly:***
+
+```cpp
+int next(int p ) { return p + 1; } 
+
+void g() {
+    int x = 1;
+    increment(x); // x = 2
+    x = next(x); // x = 3
+}
+```
+
+The ```increment(x)``` notation doesn't give a clue to the reader that ```x```'s value is being modified, the way ```x = next(x)``` does. Consequently, "plain" reference arguments should be used only where the name of the functio ngives a strong hint that the reference argument is modified.
+
+***References can also be used as return types.***
+
+### Rvalue references
+
+The basic idea of having more than one kind of reference is to support different uses of objects:
+
+* A non-```const``` lvalue reference refers to an object, to which the user of the reference can write.
+* A ```const``` lvalue reference refers to a constant, which is immutable from the point of view of the user of the reference.
+* An rvalue reference refers to a temporary object, which the user of the refernece can (and typically will) modify, assuming that the object will never be used again.
+
+***An rvalue reference can bind to an rvalue, but not to an lvalue. In that, an rvalue reference is exactly opposite to an lvalue reference***. For example:
+
+```cpp
+string var {"Cambridge"};
+string f();
+
+string& r1 {var}; // lvalue reference, bind r1 to var (an lvalue)
+string& r2 {f()}; // lvalue reference, errror; f() is an rvalue
+string& r3 {"Princeton"}; // lvalue reference, error: cannot bind to temporary
+
+string&& rr1 {f()}; // rvalue reference, find: bind rr1 to rvalue (a temporary)
+string&& rr2 {var}; // rvalue reference, error: var is an lvalue
+string&& rr3 {"Oxford"}; // rr3 refers to a temporary holding "Oxford"
+
+const string& cr1 {"Harvard"}; // OK: make temporary and bind to cr1
+```
+
+The ```&&``` declarator operator means "rvalue reference". We do *not* use ```const``` rvalue references; most of the benefits from using rvalue references involve writing to the object to which it refers. Both a ```const``` lvalue reference and an rvalue reference can bind to an rvalue. However, the purposes will be fundamentally different:
+
+* We use rvalue references to implement a "destructive read" for optimization of what would otherwise have required a copy.
+* We use a ```const``` lvalue reference to prevent modificaiton of an argument.
+
+An obejct referred to by an rlvalue refernece is accessed exactly like an object referred to by an lvalue reference or an ordinary variable name.
+
+## References to references
+
+***If you take a reference to a reference to a type, you get a reference to that ytpe, rahter than some kiknd of special reference to reference type.*** But what kind of reference? Lvalue reference or rvalue reference ? **lvalue reference always wins.**
+
+This makes sense: nothgin we can do with types can change the fact that na lvalue reference refers to an lvalue. This is sometimes known as *reference collapse*.
+
+The syntax does not allow
+
+```cpp
+int & & & r = i; // NOT ALLOWED
+```
+
+Reference to reference can only happen as the result of an alias or a template type argument.
+
+## Pointers and references
+
+Pointers and references are two mechanisms for referering to an object from different places in a program without copying. We can show this similiarity graphically:
+
+![Pointers and references](ScreenshotsForNotes/SectionII/Chapter7/pointers_and_references.PNG)
+
+Each has its strengths and weaknesses.
+
+***If you need to change which object to refer to, use a pointer***
+
+***Conversly, if you want to be sure that a name always referes to the same object, use a reference.***
+
+A reference is not an object. In many cases, a reference can be optimized away by the compiler, so that uses directly access the object referred to, rahter tha indirectly through the reference. If you want a collection of something that refers to an object, you must use a pointer:
+
+```cpp
+string x = "Colege Station";
+string y = "Manhattan";
+
+string& a1[] = { x, y }; // error: array of references
+string* a2[] = {&x, &y}; // OK
+
+vector<string&> s1 = {x, y}; // error: vector of references
+vector<stirng*> s2 = {&x, &y} // OK
+```
+
+Once we leave the cases where C++ leaves no choice for the programmer, we enter the domain of aesthetics. Ideally, we will make our choices so as to minimize the probability of error and in particular to maximize readability of code. 
+
+If you need a notion of "no value," pointers offer ```nullptr```. There is no equivalent "null reference," so fi you need a "no value," using a pointer may be most appropriate.
+
+## Advice
+
+1. Keep use of pointers simple and straightforward;
+2. Avoid nontrivial pointer arithemtic;
+3. Take care not to write beyond the boudns of an array;
+4. Avoid multidimensional arrays; define suitable containers instead;
+5. Use ```nullptr``` rather than ```0``` or ```NULL```;
+6. Use containres (e.g., ```vector```, ```array```, and ```valarray```) rather than built-in (C-style) arrays;
+7. Use ```string``` rather than zero-terminated arrays of ```char```;
+8. Use raw strings for string literals with complicated users of backslash;
+9. Prefer ```const``` reference arguments to plain reference arguments;
+10. Use rvalue references (only) for forwarding and move semantics;
+11. Keep pointers that represent ownership inside handle classes;
+12. Avoid ```void*``` except in low-level code;
+13. Use ```const``` pointers and ```const``` references to express immutability in interfaces;
+14. Prefer references to pointers as arguments, except where "no objevct" in a reasonable option;
