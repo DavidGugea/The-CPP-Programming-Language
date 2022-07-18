@@ -1273,3 +1273,407 @@ If you need a notion of "no value," pointers offer ```nullptr```. There is no eq
 12. Avoid ```void*``` except in low-level code;
 13. Use ```const``` pointers and ```const``` references to express immutability in interfaces;
 14. Prefer references to pointers as arguments, except where "no objevct" in a reasonable option;
+
+# 8. Structures, Unions, and Enumerations
+
+```>```
+
+## Introduction
+
+The key to effective use of C++ is the definition and use of user-defined types. There are three most primitve variants of the notion of a user-define type:
+
+* A ```struct``` (a structure) is a **sequence of elements** (called *members*) of arbitrary types.
+* A ```union``` is a ```struct``` that holds the value of just one of its elements at any one time.
+* An ```enum``` (an enumeration) is a  tyep w wit ha set of named constants (called *enumerators*).
+* ```enum class``` ( a scoped enumeration) is an ```enum``` where the enumerators are within the scope of the enumeration and no implicit conversions to other types are provided.
+
+They are primarily focused on the representation of data. The notion of a ```struct``` as described here is a simple form of a ```class```.
+
+## Structures
+
+An array is an ggregate of elements of the same type. In its simplest form, a ```struct``` is an aggregate of elements of arbitrary types. For example:
+
+```cpp
+struct Address {
+    const char* name;
+    int number;
+    const char* street;
+    const char* town;
+    char state[2];
+    const char* zip;
+};
+```
+
+### Declaration of structs
+
+Variables of type ```Address``` can be **declared** exactly like other variables, and the individual *members* can be accessed using the ```.``` (dot) operator. For example:
+
+```cpp
+void f(){
+    Address jd;
+    jd.name = "Jim Dandy";
+    jd.number = 61;
+}
+```
+
+### Initialization of structs
+
+Variables of ```struct``` types can be **initialized** using the ```{}``` notation. For example:
+
+```cpp
+Address address_2 = {
+    "This is a test name",
+    2,
+    "This is a test street name",
+    "This is a test town name",
+    {'N', 'J'},
+    "12312",
+};
+```
+
+### Struct pointer dereference
+
+Strucutres are often accessed through pointers using the ```->``` (```struct``` pointer dereference) operator. For example:
+
+```cpp
+void print_addr_name(const Address* p) {
+    cout << p->name << endl;
+}
+```
+
+***When ```p``` is a pointer, ```p->m``` is equivalent to ```(*p).m```***
+
+### Assigning, passing and returning structs as function arguments
+
+Object sof structure types can be assigned, apssed as function arguments, adn returned as the result from a function. For example:
+
+```cpp
+Addresss current;
+
+Address set_current(Address next) {
+    address prev = current;
+    current = next;
+    return prev;
+}
+```
+
+Other plausible operation, suhca s comparison (```==``` and ```!=```), are not available by default. However, the use can define such operators.
+
+### ```struct``` Layout - Memory allocation for structs
+
+An object of a ```struct``` holds its members in the order they are declared. For example, we might store primitive equipment readout in a structure like this:
+
+```cpp
+struct Readout {
+    char hour;
+    int value;
+    char seq;
+}
+```
+
+You could imagine the mmebers of a ```Readout``` object laid out in memory like this:
+
+![Struct layout](ScreenshotsForNotes/SectionII/Chapter8/StructLayout.PNG)
+
+Members are allocateed in memroy in declaration order, so the address of ```hour``` must be less than the address of ```value```.
+
+However, the size of an object of a ```struct``` is not necessarily the sum of the sizes of its memebers. This is because many amchines require objects of certain types to be allocated on architecture-dependent boundaries or handle such objects much more efficiently if they are. For example, integers are often allocated on word boundaries. On such machines, objects are said to have to be properly ***aligned***. This leads to "holes" in the structures. A more realistic layout of a ```Readout``` on a machine with 4-byte ```int``` would be:
+
+![Struct layout 2](ScreenshotsForNotes/SectionII/Chapter8/StructLayout2.PNG)
+
+In this case, as on many machines, ```sizeof(Readout)``` is ```12```, and not ```6``` as one would naively expect from simply adding the sizes of the individual memebers.
+
+***You can minimze wasted space by simply ordering members by size*** (largest member first). For example:
+
+```cpp
+struct Readout{
+    int value;
+    char hour;
+    char seq;
+}
+```
+
+This would give us:
+
+![Struct layout 3](ScreenshotsForNotes/SectionII/Chapter8/StructLayout3.PNG)
+
+Note that his still elaves a 2-byte "hole" (unused space) in a ```Readout``` and ```sizeof(Readout)==8```. The reason is that we need to maintain alignment when we put two objects next to each other, say, in an array of ```Readout```s. The size of an array of 10 ```Readout``` objects is ```10*sizeof(Readout)```.
+
+***It is usually best to order members for readability and sort them by size only if there is a demonstarted need to optimize.***
+
+### Sturctures and classes
+
+A ```struct``` is simply a ```class``` where the members are ```public``` by default.
+
+You do not need to define a constructor simply to initialize members in order. For example:
+
+```cpp
+struct Point {
+    int x, y;
+}
+
+Point p0; // danger: uninitialized if in local scope
+Point p1 {}; // default construction: {{}, {}} that is {0, 0}
+Point p2 {1}; // the second member is default constructoed: {1, {}}; that is {1, 0}
+Point p3 {1, 2}; // {1, 2}
+```
+
+### Structures and arrays
+
+Naturally, we can have arrays of ```struct```s and ```struct```s containing arrays. For example:
+
+```cpp
+struct Point {
+    int x, y;
+};
+
+struct Array {
+    Point elem[3];
+};
+
+int main() {
+    Point points[3] {
+        {1, 2},
+        {3, 4},
+        {5, 6}
+    };
+    int x = points[2].x;
+
+    Array points2 {{
+        {1, 2},
+        {3, 4},
+        {5, 6}
+    }};
+
+    int y = points2.elem[2].y;
+
+    return 1;
+}
+```
+
+Placing a built-in array in a ```struct``` allows us to treat that array as an object: we can copy the ```struct``` containing it it initialization (including argument passing and function return) and assignment. For example:
+
+```cpp
+Array shift(Array a, Point p) {
+    for (int i = 0; i != 3; i++) {
+        a.elem[i].x += p.x;
+        a.elem[i].y += p.y;
+    };
+
+    return a;
+};
+```
+
+### Type Equivalence
+
+Two ```struct```s are different types even when they ahve the same members. For example:
+
+```cpp
+struct S1 { int a; };
+struct S2 { int a; };
+```
+
+```S1``` and ```S2``` are two different types, so:
+
+```cpp
+S1 x;
+S2 y = x; // error: type mismatch
+```
+
+A ```struct``` is also a different type from a type used as a member. For example:
+
+```cpp
+S1 x;
+int i = x; // error: type mismatch
+```
+
+Every ```struct``` must have a unique definition in a program
+
+### Plain Old Data
+
+For us to manipulat an object as "just data" (as POD), the object must
+
+* not have a complcaited layout
+* not have nonstandard (user-defined) copy semantics, and
+* have a trivial default constructor
+
+## Fields
+
+It seems extravagant to use a whole byte (a char or a bool) to represent a binary variable – for example, an on/off switch – but a char is the smallest object that can be independently allocated and addressed in C++. It is possible, however, to bundle several such tiny variables together as fields in a struct. **A field is often called a bit-field**. A member is defined to be a field by specifying the number of bits it is to occupy. Unnamed fields are allowed. They do not affect the meaning of the named fields, but they can be used to make the layout better in some machine-dependent way:
+
+```cpp
+struct PPN {  // Physical Page Number
+    unsigned int PFN: 22;  // Page Frame Number
+    int: 3;
+    unsigned int CCA: 3;
+    bool nonreachable: 1;
+    bool dirty: 1;
+    bool valid: 1;
+    bool global: 1;
+};
+```
+
+This example also illustrates the other main use of fields: to name parts of an externally imposed layout. A field must be of an integral or enumeration type. It is not possible to take the address of a field. Apart from that, however, it can be used exactly like other variables. Note that a bool field really can be represented by a single bit.
+
+Surprisingly, using fields to pack several variables into a single byte does not necessarily save space. It saves data space, but the size of the code needed to manipulate these variables increases on most machines. Programs have been known to shrink significantly when binary variables were converted from bit-fields to characters! Furthermore, it is typically much faster to access a char or an int than to access a field. ***Fields are simply a convenient shorthand for using bitwise logical operators to extract information from and insert information into part of a word.***
+
+A bit-field with size zero has a special meaning: Start in a new "allocation unit." The exact meaning is implementation defined, but usually it means that the following field starts at a word boundary.
+
+## Unions
+
+***A ```union``` is a ```struct``` in which all memebers are allocated at the same address so that the ```union``` occupies only as mcuh space as its largest member.*** Naturally, a ```union``` can hold a value for only one member at a time. For example, consider a symbo ltable entry that holds a name and a value:
+
+```cpp
+enum Type { str, num };
+
+struct Entry {
+    char* name;
+    Type t;
+    char* s; // use s if t==str
+    int i; // use i if t==num
+};
+
+void f(Entry* p) {
+    if (p->t == str)
+        cout << p->s << endl;
+}
+```
+
+The members ```s``` and ```i``` can never be used at the same time, so space is wasted. It can be easily recovered by specifying that both should be member of a ```union``` like this:
+
+```cpp
+union Value {
+    char* s;
+    int i;
+};
+```
+
+The language doesn't keep track of which kind of value is held by a ```union```, so the programmer must do that:
+
+```cpp
+struct Entry {
+    char* name;
+    Type t;
+    Value v;
+}
+
+void f(Entry* p) {
+    if (p->t == str)
+        cout << p-> v.s << endl;
+}
+```
+
+***Use of ```union```s can be essential for compactness of data and through that for performance. Howev er, most programs don’t improve much from the use of unions and unions are rather error-prone. Consequently, I consider ```union```s an overused feature; avoid them when you can.***
+
+### Unions and classes
+
+Many nontrivial ```union```s have a member that is much larger than the most frequtnly used members. Because the size of a ```union``` is att least asl arge as its largest member, space is wasted. This waste can often be elminated by using a set of derived classes instead of a ```union```.
+
+## Enumerations
+
+An *enumeration* is a type that can hold a set of integer value specified by the user. Some of an enumeration's possible values are named and called *enumerators*. For example:
+
+```cpp
+enum class Color {red, green, blue};
+```
+
+Thsi defines an enumeation called ```Color``` with the enumerators ```red```, ```green```, and ```blue```. "An enumeration" is colloquially shortened to "an ```enum```".
+
+There are two kinds of enumerations:
+
+1. ```enum class```es, for which the enumerator names (e.g., ```red```) are local to the ```num``` and their values do not implicitly convert to other types.
+2. "Plain ```enum```s," for which the enumerator names are in the same scope as the ```enum``` and their values implcitly convert to integers.
+
+### ```enum class```es
+
+An ```enum class``` is a scoped and strongly typed enumeration. For example:
+
+```cpp
+enum class Traffic_light { red, yellow, green };
+enum class Warning { green, yellow, orange, red };
+
+Warning w = Warning::red;
+```
+
+Note that the enumerators present in both ```enum```s do not clash because each is in the scope of its own ```enum class```.
+
+An enumeration is represented by some integer type and each enumerator by some integer value. We call the type used to represnet an enumeration its *underyling type*. The underlying type must be one of the signed or unsgined integer types; the default is ```int```. We could be explicit about that:
+
+```cpp
+enum class Warning: int { green, yellow, orange, red }; // sizeof(Warning) == sizeof(int)
+```
+
+If we considered that too wasteful of space, we could instaed use a ```char```:
+
+```cpp
+enum class Warning: char { green, yellow, orange, red }; // sizeof(Warning) == 1
+```
+
+An enumerator can be initailzied by a constant expression of integral type. For example:
+
+```cpp
+enum class Printer_flags {
+    none = 0,
+    acknowledge=1,
+    paper_empty=2,
+    busy=4,
+    out_of_black=8,
+    out_of_color=16,
+};
+```
+
+### Plain ```enum```s
+
+The enumerators of a plain ```enum``` are exported into the ```enum```'s scope, and they implcitly convert to values of some integer type. Consider the following example:
+
+```cpp
+enum Traffic_light { red, yellow, green };
+enum Warning { green, yellow, orange, red };
+
+// error: two definitinos of yellow (to the same value)
+// error: two definitinos of red (to different values)
+ 
+Warning a1 = 7;  // error: no int->Warning conversion
+int a2 = green; // OK: green is in scope and converts to int
+int a3 = Warning::green; // OK: Warning->int conversion
+```
+
+We were "lucky" that defining ```red``` in two plain enumerations in a single scope saved us from hard-to-spot errors. Consider "cleaning up" the plain ```enum```s by disambiguating the enumerators (as is easily done in a small program but can be done only with great difficulty in a large one):
+
+```cpp
+enum Traffic_light{ tl_red, tl_yellow, tl_green };
+enum Warning { green, yellow, orange, red };
+
+void f(Traffic_light x) {
+    if (x == red) {/* ... */} // OK (ouch!)
+    if (x == Warning::red) {/* ... */} // OK (ouch!)
+    if (x == Traffic_light::red) {/* ... */} // error: red is not a Traffic_light value
+}
+```
+
+The complier accepts the ```x==red```, which is almost certainly a bug. ***The injection of names into an enclosing scope*** (as ```enum```s, but not ```enum class```es or ```class```es, do) ***is namespace pollution*** and can be a major problem in larger programs.
+You can specify the underlying type of a plain enumeration, just as you can for ```enum class```es. If you do, you can declare the enumerations without defining them until later. Fopr example:
+
+```cpp
+enum Traffic_light: char { tl_red, tl_yellow, tl_green }; // underlying type is char 
+```
+
+### Unnamed ```enum```s
+
+A plain ```enum``` ca be unnamed. For example:
+
+```cpp
+enum { arrow_up = 1, arrow_down, arrow_sideways };
+```
+
+We use that when all we need is a set of integer constants, rather than a type ot use for variables.
+
+## Advice
+
+1. When compactness of data is important, lay out structure data members with larger members before smaller ones;
+2. Use bit-fields to represent hardware-imposed data layouts;
+3. Don’t naively try to optimize memory consumption by packing several values into a single byte;
+4. Use ```union```s to save space (represent alternatives) and never for type conversion;
+5. Use enumerations to represent sets of named constants;
+6. Prefer ```class enum```s over *plain* ```enum```s to minimize surprises;
+7. Define operations on enumerations for safe and simple use;
