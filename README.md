@@ -1677,3 +1677,65 @@ We use that when all we need is a set of integer constants, rather than a type o
 5. Use enumerations to represent sets of named constants;
 6. Prefer ```class enum```s over *plain* ```enum```s to minimize surprises;
 7. Define operations on enumerations for safe and simple use;
+
+# 9. Statements
+
+## Declaration and expression
+
+***A declaration is a statement and an expression becomes a statement when you add a semicolon at its end.***
+
+Unlike an expression, a statement does not have a value. Instead, statements are used to specify the order of execution.
+
+## Statement summary
+
+![Statement Summary](ScreenshotsForNotes/SectionII/Chapter9/StatementSummary.PNG)
+
+* A semicolon is by itself a statement, the empty statement.
+* A (possibly empty) sequence of statements within "curly braces" (i.e., ```{``` and ```}```) is called a block or a compound statement. A name declared in a block goes out of scope at the end of its block
+* A declaration is a statement and there is no assignment statement or procedure-call statement; assignments and function calls are expressions.
+* A for-init-statement must be either a declaration or an expression-statement. Note that both end with a semicolon.
+* A for-init-declaration must be the declaration of a single uninitialized variable.
+
+## Declarations as statements
+
+A declaration is a statement. Unless a variable is declared ```static```, its initializer is executed whenever the thread of control passes through the declaration. The reason for allowing declarations wherever a statement can be used is to enable the programmer to minimize the errors caused by uninitialized variables and to allow better locality in code. There is rarely a reason to introduce a variable before there is a value for it to hold.
+
+The ability to place declarations after executable code is essential for many constants and for single- assignment styles of programming where a value of an object is not changed after initialization. For user-defined types, postponing the definition of a variable until a suitable initializer is available can also lead to better performance.
+
+```cpp 
+void use() 
+{    
+    string s1;
+    s1 = "The best is the enemy of the good."; 
+} 
+```
+
+This requests a default initialization (to the empty string) followed by an assignment. This can be slower than a simple initialization to the desired value:
+
+```cpp
+string s2 {"Voltaire"}; 
+```
+
+## Rules of thumb for comments
+
+* A comment for each source file stating what the declarations in it have in common, references to manuals, the name of the programmer, general hints for maintenance, etc.
+* A comment for each class, template, and namespace
+* A comment for each nontrivial function stating its purpose, the algorithm used (unless it is obvious), and maybe something about the assumptions it makes about its environment
+* A comment for each global and namespace variable and constant
+* A few comments where the code is nonobvious and/or nonportable
+
+A well-chosen and well-written set of comments is an essential part of a good program. Writing good comments can be as difficult as writing the program itself. It is an art well worth cultivating.
+
+## Advice
+
+1. Don’t declare a variable until you have a value to initialize it with;
+2. Prefer a switch-statement to an if-statement when there is a choice;
+3. Prefer a range-for-statement to a for-statement when there is a choice;
+4. Prefer a for-statement to a while-statement when there is an obvious loop variable;
+5. Prefer a while-statement to a for-statement when there is no obvious loop variable;
+6. Avoid do-statements;
+7. Avoid goto;
+8. Keep comments crisp;
+9. Don’t say in comments what can be clearly stated in code;
+10. State intent in comments;
+11. Maintain a consistent indentation style
