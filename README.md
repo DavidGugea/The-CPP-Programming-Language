@@ -1742,6 +1742,8 @@ A well-chosen and well-written set of comments is an essential part of a good pr
 
 # 10. Expressions
 
+## Operator Summary
+
 This section presents a summary of expressions and some examples. Each operator is followed by one or more names commonly used for it and an example of its use. In these tables:
 
 * A name is an identifier (e.g., sum and map), an operator name (e.g., operator int, operator+, and operator"" km), or the name of a template specialization (e.g., sort<Record> and array<int,10>), possibly qualified using :: (e.g., std::vector and vector<T>::operator[]).
