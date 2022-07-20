@@ -1739,3 +1739,583 @@ A well-chosen and well-written set of comments is an essential part of a good pr
 9. Don’t say in comments what can be clearly stated in code;
 10. State intent in comments;
 11. Maintain a consistent indentation style
+
+# 10. Expressions
+
+This section presents a summary of expressions and some examples. Each operator is followed by one or more names commonly used for it and an example of its use. In these tables:
+
+* A name is an identifier (e.g., sum and map), an operator name (e.g., operator int, operator+, and operator"" km), or the name of a template specialization (e.g., sort<Record> and array<int,10>), possibly qualified using :: (e.g., std::vector and vector<T>::operator[]).
+* A class-name is the name of a class (including decltype(expr) where expr denotes a class).
+* A member is a member name (including the name of a destructor or a member template).
+* An object is an expression yielding a class object.
+* A pointer is an expression yielding a pointer (including this and an object of that type that supports the pointer operation).
+* An expr is an expression, including a literal (e.g., 17, "mouse", and true)
+* An expr-list is a (possibly empty) list of expressions.
+* An lvalue is an expression denoting a modifiable object.
+* A type can be a fully general type name (with ∗, (), etc.) only when it appears in parentheses; elsewhere, there are restrictions.
+* A lambda-declarator is a (possibly empty, comma-separated) list of parameters optionally followed by the mutable specifier, optionally followed by a noexcept specifier, optionally followed by a return type.
+* A capture-list is a (possibly empty) list specifying context dependencies.
+* A stmt-list is a (possibly empty) list of statements.
+
+The syntax of expressions is independent of operand types. The meanings presented here apply when the operands are of built-in types. In addition, you can define meanings for operators applied to operands of user-defined types.
+
+A table can only approximate the rules of the grammar.
+
+![Operator Summary](ScreenshotsForNotes/SectionII/Chapter10/OperatorSummary1.PNG)
+
+Each box holds operators with the same precedence. Operators in higher boxes have higher precedence. For example, N::x.m means (N::m).m rather than the illegal N::(x.m).
+
+![Operator Summary](ScreenshotsForNotes/SectionII/Chapter10/OperatorSummary2.PNG)
+
+For example, postfix ++ has higher precedence than unary ∗, so ∗p++ means ∗(p++), not (∗p)++.
+
+![Operator Summary](ScreenshotsForNotes/SectionII/Chapter10/OperatorSummary3.PNG)
+
+For example: a+b∗c means a+(b∗c) rather than (a+b)∗c because ∗ has higher precedence than +. Unary operators and assignment operators are right-associative; all others are left-associative.
+
+For example, a=b=c means a=(b=c) whereas a+b+c means (a+b)+c.
+
+A few grammar rules cannot be expressed in terms of precedence (also known as binding strength) and associativity. For example, a=b<c?d=e:f=g means a=((b<c)?(d=e):(f=g)), but you need to look at the grammar to determine that.
+
+Before applying the grammar rules, lexical tokens are composed from characters. The longest possible sequence of characters is chosen to make a token. For example, && is a single operator, rather than two & operators, and a+++1 means (a ++) + 1. This is sometimes called the Max Munch rule.
+
+![Token Summary](ScreenshotsForNotes/SectionII/Chapter10/TokenSummary.PNG)
+
+Whitespace characters (e.g., space, tab, and newline) can be token separators (e.g., int count is a keyword followed by an identifier, rather than intcount) but are otherwise ignored.
+
+Some characters from the basic source character set, such as |, are not convenient to type on some keywords. Also, some programmers find it odd to use of symbols, such as && and ˜, for basic logical operations. Consequently, a set of alternative representation are provided as keywords:
+
+![Alternative Representation](ScreenshotsForNotes/SectionII/Chapter10/AlternativeRepresentation.PNG)
+
+For example:
+
+```cpp
+bool b = not (x or y) and z;
+int x4 = ˜ (x1 bitor x2) bitand x3;
+```
+
+is equivalent to
+
+```cpp
+bool b = !(x || y) && z;
+int x4 = ˜(x1 | x2) & x3;
+```
+
+Note that and= is not equivalent to &=; if you prefer keywords, you must write and_eq.
+
+## Results
+
+The result types of arithmetic operators are determined by a set of rules known as *the usual arithmetic conversions*. The overall aim is to produce a result of the *largest* operand type. For example, if a binary operator has a floating-point operand, the computation is done using floating- point arithmetic and the result is a floating-point value. Similarly, if it has a long operand, the computation is done using long integer arithmetic, and the result is a long. Operands that are smaller than an int (such as bool and char) are converted to int before the operator is applied.
+
+The relational operators, ==, <=, etc., produce Boolean results. The meaning and result type of user-defined operators are determined by their declarations.
+
+Where logically feasible, the result of an operator that takes an lvalue operand is an lvalue denoting that lvalue operand. For example:
+
+```cpp
+
+void f(int x, int y)
+{
+    int j = x = y; // the value of x=y is the value of x after the assignment
+    int∗ p = &++x; //p points to x
+    int∗ q = &(x++); // error : x++ is not an lvalue (it is not the value stored in x)
+    int∗ p2 = &(x>y?x:y); // address of the int with the larger value
+    int& r = (x<y)?x:1; // error : 1 is not an lvalue
+}
+```
+
+If both the second and third operands of ?: are lvalues and have the same type, the result is of that type and is an lvalue. Preserving lvalues in this way allows greater flexibility in using operators. This is particularly useful when writing code that needs to work uniformly and efficiently with both built-in and user-defined types (e.g., when writing templates or programs that generate C++ code).
+
+The result of sizeof is of an unsigned integral type called size_t defined in <cstddef>. The result of pointer subtraction is of a signed integral type called ptrdiff_t defined in <cstddef>.
+
+Implementations do not have to check for arithmetic overflow and hardly any do. For example:
+
+```cpp
+void f()
+{
+    int i = 1;
+    while (0 < i) ++i;
+        cout << "i has become negative!" << i << '\n';
+}
+```
+
+This will (eventually) try to increase i past the largest integer. What happens then is undefined, but typically the value ‘‘wraps around’’ to a neg ative number (on my machine −2147483648). Similarly, the effect of dividing by zero is undefined, but doing so usually causes abrupt termination of the program. In particular, underflow, overflow, and division by zero do not throw standard exceptions.
+
+## Order of evaluation
+
+The order of evaluation of subexpressions within an expression is undefined. In particular, you cannot assume that the expression is evaluated left-to-right. For example:
+
+```cpp
+int x = f(2)+g(3); // undefined whether f() or g() is called first
+```
+
+Better code can be generated in the absence of restrictions on expression evaluation order. Howev er, the absence of restrictions on evaluation order can lead to undefined results. For example:
+
+```cpp
+int i = 1;
+v[i] = i++; // undefined result
+```
+
+The assignment may be evaluated as either v[1]=1 or v[2]=1 or may cause some even stranger behavior. Compilers can warn about such ambiguities. Unfortunately, most do not, so be careful not to write an expression that reads or writes an object more than once, unless it does so using a single operator that makes it well defined, such as ++ and +=, or explicitly express sequencing using , (comma), &&, or ||.
+
+The operators , (comma), && (logical and), and || (logical or) guarantee that their left-hand operand is evaluated before their right-hand operand. For example, b=(a=2,a+1) assigns 3 to b. Examples of the use of || and && can be found in. For built-in types, the second operand of && is evaluated only if its first operand is true, and the second operand of || is evaluated only if its first operand is false; this is sometimes called short-circuit evaluation. Note that the sequencing operator , (comma) is logically different from the comma used to separate arguments in a function call. For example:
+
+```cpp
+f1(v[i],i++); // two arguments
+f2( (v[i],i++) ); // one argument
+```
+
+The call of f1 has two arguments, v[i] and i++, and the order of evaluation of the argument expressions is undefined. So it should be avoided. Order dependence of argument expressions is very poor style and has undefined behavior. The call of f2 has only one argument, the comma expression (v[i],i++), which is equivalent to i++. That is confusing, so that too should be avoided.
+
+Parentheses can be used to force grouping. For example, a∗b/c means (a∗b)/c, so parentheses must be used to get a∗(b/c); a∗(b/c) may be evaluated as (a∗b)/c only if the user cannot tell the difference. In particular, for many floating-point computations a∗(b/c) and (a∗b)/c are significantly different, so a compiler will evaluate such expressions exactly as written.
+
+## Operator Precedence
+
+Precedence levels and associativity rules reflect the most common usage. For example:
+
+```cpp
+if (i<=0 || max<i) // ...
+```
+
+means ‘‘if i is less than or equal to 0 or if max is less than i.’’ That is, it is equivalent to
+
+```cpp
+if ( (i<=0) || (max<i) ) // ...
+```
+
+and not the legal but nonsensical
+
+```cpp
+if (i <= (0||max) < i) // ...
+```
+
+However, parentheses should be used whenever a programmer is in doubt about those rules. Use of parentheses becomes more common as the subexpressions become more complicated, but complicated subexpressions are a source of errors. Therefore, if you start feeling the need for parentheses, you might consider breaking up the expression by using an extra variable.
+
+There are cases when the operator precedence does not result in the ‘‘obvious’’ interpretation. For example:
+
+```cpp
+if (i&mask == 0) // oops! == expression as operand for &
+```
+
+This does not apply a mask to i and then test if the result is zero. Because == has higher precedence than &, the expression is interpreted as i&(mask==0). Fortunately, it is easy enough for a compiler to warn about most such mistakes. In this case, parentheses are important:
+
+```cpp
+if ((i&mask) == 0) // ...
+```
+
+It is worth noting that the following does not work the way a mathematician might expect:
+
+```cpp
+if (0 <= x <= 99) // ...
+```
+
+This is legal, but it is interpreted as (0<=x)<=99, where the result of the first comparison is either true or false. This Boolean value is then implicitly converted to 1 or 0, which is then compared to 99, yielding true. To test whether x is in the range 0..99, we might use
+
+```cpp
+if (0<=x && x<=99) // ...
+```
+
+A common mistake for novices is to use = (assignment) instead of == (equals) in a condition:
+
+```cpp
+if (a = 7) // oops! constant assignment in condition
+```
+
+This is natural because = means ‘‘equals’’ in many languages. Again, it is easy for a compiler to warn about most such mistakes – and many do. I do not recommend warping your style to compensate for compilers with weak warnings. In particular, I don’t consider this style worthwhile:
+
+```cpp
+if (7 == a) // tr y to protect against misuse of =; not recommended
+```
+
+## Temporary Objects
+
+Often, the compiler must introduce an object to hold an intermediate result of an expression. For example, for v=x+y∗z the result of y∗z has to be put somewhere before it is added to x. For built-in types, this is all handled so that a temporary object (often referred to as just a temporary) is invisible to the user. Howev er, for a user-defined type that holds a resource knowing the lifetime of a temporary can be important. Unless bound to a reference or used to initialize a named object, a temporary object is destroyed at the end of the full expression in which it was created. A full expression is an expression that is not a subexpression of some other expression.
+
+The standard-library string has a member c_str() that returns a C-style pointer to a zeroterminated array of characters. Also, the operator + is defined to mean string concatenation. These are useful facilities for strings. However, in combination they can cause obscure problems. For example:
+
+```cpp
+void f(string& s1, string& s2, string& s3)
+{
+    const char∗ cs = (s1+s2).c_str();
+
+    cout << cs;
+
+    if (strlen(cs=(s2+s3).c_str())<8 && cs[0]=='a') {
+            // cs used here
+    }
+}
+```
+
+Probably, your first reaction is ‘‘But don’t do that!’’ and I agree. However, such code does get written, so it is worth knowing how it is interpreted.
+
+A temporary string object is created to hold s1+s2. Next, a pointer to a C-style string is extracted from that object. Then – at the end of the expression – the temporary object is deleted. However, the C-style string returned by c_str() was allocated as part of the temporary object holding s1+s2, and that storage is not guaranteed to exist after that temporary is destroyed. Consequently, cs points to deallocated storage. The output operation ```cout<<cs``` might work as expected, but that would be sheer luck. A compiler can detect and warn against many variants of this problem.
+
+The problem with the if-statement is a bit more subtle. The condition will work as expected because the full expression in which the temporary holding s2+s3 is created is the condition itself. However, that temporary is destroyed before the controlled statement is entered, so any use of cs there is not guaranteed to work.
+
+Please note that in this case, as in many others, the problems with temporaries arose from using a high-level data type in a low-level way. A cleaner programming style yields a more understandable program fragment and avoids the problems with temporaries completely. For example:
+
+```cpp
+void f(string& s1, string& s2, string& s3)
+{
+    cout << s1+s2;
+    string s = s2+s3;
+
+    if (s.length()<8 && s[0]=='a') {
+            // use s here
+    }
+}
+
+```
+
+A temporary can be used as an initializer for a const reference or a named object. For example:
+
+```cpp
+void g(const string&, const string&);
+
+void h(string& s1, string& s2)
+{
+    const string& s = s1+s2;
+
+    string ss = s1+s2;
+
+    g(s,ss); // we can use s and ss here
+}
+```
+
+This is fine. The temporary is destroyed when ‘‘its’’ reference or named object goes out of scope. Remember that returning a reference to a local variable is an error and that a temporary object cannot be bound to a non-const lvalue reference.
+
+A temporary object can also be created explicitly in an expression by invoking a constructor. For example:
+
+```cpp
+void f(Shape& s, int n, char ch)
+{
+    s.move(string{n,ch}); // construct a str ing with n copies of ch to pass to Shape::move()
+}
+```
+
+Such temporaries are destroyed in exactly the same way as the implicitly generated temporaries.
+
+## Constant Expressions
+
+C++ offers two related meanings of (constant*:
+
+* constexpr: Evaluate at compile time. * const: Do not modify in this scope.
+
+Basically, constexpr’s role is to enable and ensure compile-time evaluation, whereas const’s primary role is to specify immutability in interfaces. This section is primarily concerned with the first role: compile-time evaluation.
+
+A constant expression is an expression that a compiler can evaluate. It cannot use values that are not known at compile time and it cannot have side effects. Ultimately, a constant expression must start out with an integral value, a floating-point value, or an enumerator and we can combine those using operators and constexpr functions that in turn produce values. In addition, some addresses can be used in some forms of constant expressions.
+
+There are a variety of reasons why someone might want a named constant rather than a literal or a value stored in a variable:
+
+1. Named constants make the code easier to understand and maintain.
+2. A variable might be changed (so we have to be more careful in our reasoning than for a constant).
+3. The language requires constant expressions for array sizes, case labels, and template value arguments.
+4. Embedded systems programmers like to put immutable data into read-only memory because read-only memory is cheaper than dynamic memory (in terms of cost and energy consumption), and often more plentiful. Also, data in read-only memory is immune to most system crashes.
+5. If initialization is done at compile time, there can be no data races on that object in a multi-threaded system.
+6. Sometimes, evaluating something once (at compile time) gives significantly better performance than doing so a million times at run time.
+
+Note that reasons [1], [2], [5], and (partly) [4] are logical. We don’t just use constant expressions because of an obsession with performance. Often, the reason is that a constant expression is a more direct representation of our system requirements.
+
+As part of the definition of a data item (here, I deliberately avoid the word ‘‘variable’’), constexpr expresses the need for compile-time evaluation. If the initializer for a constexpr can’t be evaluated at compile time, the compiler will give an error. For example:
+
+```cpp
+int x1 = 7;
+constexpr int x2 = 7;
+constexpr int x3 = x1; // error : initializer is not a constant expression
+constexpr int x4 = x2; // OK
+
+void f()
+{
+    constexpr int y3 = x1; // error : initializer is not a constant expression
+    constexpr int y4 = x2; // OK
+}
+```
+
+A clever compiler could deduce that the value of x1 in the initializer for x3 was 7. However, we prefer not to rely on degrees of cleverness in compilers. In a large program, determining the values of variables at compile time is typically either very difficult or impossible.
+
+## Symbolic Constants
+
+The most important single use of constants (constexpr or const values) is simply to provide symbolic names for values. Symbolic names should be used systematically to avoid ‘‘magic numbers’’ in code. Literal values scattered freely around in code is one of the nastiest maintenance hazards. If a numeric constant, such as an array bound, is repeated in code, it becomes hard to revise that code because every occurrence of that constant must be changed to update the code correctly. Using a symbolic name instead localizes information. Usually, a numeric constant represents an assumption about the program. For example, 4 may represent the number of bytes in an integer, 128 the number of characters needed to buffer input, and 6.24 the exchange factor between Danish kroner and U.S. dollars. Left as numeric constants in the code, these values are hard for a maintainer to spot and understand. Also, many such values need to change over time. Often, such numeric values go unnoticed and become errors when a program is ported or when some other change violates the assumptions they represent. Representing assumptions as well-commented named (symbolic) constants minimizes such maintenance problems.
+
+## ```const``` in constant expressions
+
+A const is primarily used to express interfaces. However, const can also be used to express constant values. For example:
+
+```cpp
+const int x = 7;
+const string s = "asdf";
+const int y = sqrt(x);
+```
+
+A const initialized with a constant expression can be used in a constant expression. A const differs from a constexpr in that it can be initialized by something that is not a constant expression; in that case, the const cannot be used as a constant expression. For example:
+
+```cpp
+constexpr int xx = x; // OK
+constexpr string ss = s; // error : s is not a constant expression
+constexpr int yy = y; // error : sqr t(x) is not a constant expression
+```
+
+## Literal Types
+
+A sufficiently simple user-defined type can be used in a constant expression. For example:
+
+```cpp
+struct Point {
+    int x,y,z;
+    constexpr Point up(int d) { return {x,y,z+d}; }
+    constexpr Point move(int dx, int dy) { return {x+dx,y+dy}; }
+};
+```
+
+A class with a constexpr constructor is called a literal type. To be simple enough to be constexpr, a constructor must have an empty body and all members must be initialized by potentially constant expressions. For example:
+
+```cpp
+constexpr Point origo {0,0};
+
+constexpr int z = origo.x;
+
+constexpr Point a[] = {
+    origo, Point{1,1}, Point{2,2}, origo.move(3,3)
+};
+
+constexpr int x = a[1].x; // x becomes 1
+
+constexpr Point xy{0,sqrt(2)}; // error : sqr t(2) is not a constant expression
+```
+
+Note that we can have constexpr arrays and also access array elements and object members.
+
+Naturally, we can define constexpr functions to take arguments of literal types. For example:
+
+```cpp
+constexpr int square(int x)
+{
+    return x*x;
+}
+
+constexpr int radial_distance(Point p)
+{
+    return isqrt(square(p.x)+square(p.y)+square(p.z));
+}
+
+constexpr Point p1 {10,20,30}; // the default constructor is constexpr
+
+constexpr p2 {p1.up(20)}; // Point::up() is constexpr
+
+constexpr int dist = radial_distance(p2);
+```
+
+I used int rather than double just because I didn’t have a constexpr floating-point square root function handy.
+
+For a member function constexpr implies const, so I did not have to write:
+
+```cpp
+constexpr Point move(int dx, int dy) const { return {x+dx,y+dy}; }
+```
+
+## Address Constant Expressions
+
+The address of a statically allocated object (§6.4.2), such as a global variable, is a constant. Howev er, its value is assigned by the linker, rather than the compiler, so the compiler cannot know the value of such an address constant. That limits the range of constant expressions of pointer and reference type. For example:
+
+```cpp
+constexpr const char∗ p1 = "asdf";
+constexpr const char∗ p2 = p1; // OK
+constexpr const char∗ p2 = p1+2; // error : the compiler does not know the value of p1
+constexpr char c = p1[2]; // OK, c==’d’; the compiler knows the value pointed to by p1
+```
+
+## Implicit Type Conversion
+
+Integral and floating-point types can be mixed freely in assignments and expressions. Wherever possible, values are converted so as not to lose information. Unfortunately, some valuedestroying (*narrowing*) conversions are also performed implicitly. A conversion is value-preserving if you can convert a value and then convert the result back to its original type and get the original value. If a conversion cannot do that, it is a narrowing conversion. This section provides a description of conversion rules, conversion problems, and their resolution.
+
+## Promotions
+
+The implicit conversions that preserve values are commonly referred to as promotions. Before an arithmetic operation is performed, integral promotion is used to create ints out of shorter integer types. Similarly, floating-point promotion is used to create doubles out of floats. Note that these promotions will not promote to long (unless the operand is a char16_t, char32_t, wchar_t, or a plain enumeration that is already larger than an int) or long double. This reflects the original purpose of these promotions in C: to bring operands to the ‘‘natural’’ size for arithmetic operations.
+
+The integral promotions are:
+
+* A char, signed char, unsigned char, short int, or unsigned short int is converted to an int if int can represent all the values of the source type; otherwise, it is converted to an unsigned int.
+* A char16_t, char32_t, wchar_t, or a plain enumeration type is converted to the first of the following types that can represent all the values of its underlying type: int, unsigned int, long, unsigned long, or unsigned long long.
+* A bit-field is converted to an int if int can represent all the values of the bit-field; otherwise, it is converted to unsigned int if unsigned int can represent all the values of the bit-field. Otherwise, no integral promotion applies to it.
+* A bool is converted to an int; false becomes 0 and true becomes 1.
+
+Promotions are used as part of the usual arithmetic conversions
+
+## Conversions
+
+The fundamental types can be implicitly converted into each other in a bewildering number of ways. In my opinion, too many conversions are allowed. For example:
+
+```cpp
+void f(double d)
+{
+    char c = d; // beware: double-precision floating-point to char conversion
+}
+```
+
+When writing code, you should always aim to avoid undefined behavior and conversions that quietly throw away information (*narrowing conversions*).
+
+A compiler can warn about many questionable conversions. Fortunately, many compilers do.
+
+The {}-initializer syntax prevents narrowing. For example:
+
+```cpp
+void f(double d)
+{
+    char c {d}; // error : double-precision floating-point to char conversion
+}
+```
+
+If potentially narrowing conversions are unavoidable, consider using some form of run-time checked conversion function, such as narrow_cast<>().
+
+## Integral Conversions
+
+An integer can be converted to another integer type. A plain enumeration value can be converted to an integer type.
+
+If the destination type is unsigned, the resulting value is simply as many bits from the source as will fit in the destination (high-order bits are thrown away if necessary). More precisely, the result is the least unsigned integer congruent to the source integer modulo 2 to the nth, where n is the number of bits used to represent the unsigned type. For example:
+
+```cpp
+unsigned char uc = 1023;// binar y 1111111111: uc becomes binary 11111111, that is, 255
+```
+
+If the destination type is signed, the value is unchanged if it can be represented in the destination type; otherwise, the value is implementation-defined:
+
+```cpp
+signed char sc = 1023; // implementation-defined
+```
+
+Plausible results are 127 and −1.
+
+A Boolean or plain enumeration value can be implicitly converted to its integer equivalent.
+
+## Floating-Point Conversions
+
+A floating-point value can be converted to another floating-point type. If the source value can be exactly represented in the destination type, the result is the original numeric value. If the source value is between two adjacent destination values, the result is one of those values. Otherwise, the behavior is undefined. For example:
+
+```cpp
+float f = FLT_MAX; // largest float value
+double d = f; // OK: d == f
+
+double d2 = DBL_MAX; // largest double value
+float f2 = d2; // undefined if FLT_MAX<DBL_MAX
+
+long double ld = d2; // OK: ld = d3
+long double ld2 = numeric_limits<long double>::max();
+double d3 = ld2; // undefined if sizeof(long double)>sizeof(double)
+```
+
+DBL_MAX and FLT_MAX are defined in <climits>; numeric_limits is defined in <limits>.
+
+## Pointer and reference conversions
+
+Any pointer to an object type can be implicitly converted to a void∗. A pointer (reference) to a derived class can be implicitly converted to a pointer (reference) to an accessible and unambiguous base. Note that a pointer to function or a pointer to member cannot be implicitly converted to a void∗.
+
+A constant expression that evaluates to 0 can be implicitly converted to a null pointer of any pointer type. Similarly, a constant expression that evaluates to 0 can be implicitly converted to a pointer-to-member type. For example:
+
+```cpp
+int* p = (1+2)*(2*(1−1)); // OK, but weird
+```
+
+Prefer ```nullptr```.
+
+A ```T*``` can be implicitly converted to a ```const T*```. Similarly, a T& can be implicitly converted to a const T&.
+
+## Pointer-to-Member conversions
+
+Pointers and references to members can be implicitly converted. ( described in later chapters )
+
+## Boolean Conversions
+
+Pointer, integral, and floating-point values can be implicitly converted to bool. A nonzero value converts to true; a zero value converts to false. For example:
+
+```cpp
+void f(int∗ p, int i)
+{
+    bool is_not_zero = p; // true if p!=0
+    bool b2 = i; // true if i!=0
+    // ...
+}
+```
+
+The pointer-to-bool conversion is useful in conditions, but confusing elsewhere:
+
+```cpp
+void fi(int);
+void fb(bool);
+
+void ff(int∗ p, int∗ q)
+{
+    if (p) do_something(∗p); //OK
+    if (q!=nullptr) do_something(∗q); // OK, but verbose
+    // ...
+    fi(p); //error : no pointer to int conversion
+    fb(p); //OK: pointer to bool conversion (surpr ise!?)
+}
+```
+
+Hope for a compiler warning for fb(p).
+
+## Floating-Integral Conversions
+
+When a floating-point value is converted to an integer value, the fractional part is discarded. In other words, conversion from a floating-point type to an integer type truncates. For example, the value of int(1.6) is 1. The behavior is undefined if the truncated value cannot be represented in the destination type. For example:
+
+```cpp
+int i = 2.7; // i becomes 2 char b = 2000.7; // undefined for 8-bit chars: 2000 cannot be represented as an 8-bit char
+```
+
+Conversions from integer to floating types are as mathematically correct as the hardware allows. Loss of precision occurs if an integral value cannot be represented exactly as a value of the floating type. For example:
+
+```cpp
+int i = float(1234567890);
+```
+
+On a machine where both ints and floats are represented using 32 bits, the value of i is 1234567936.
+
+Clearly, it is best to avoid potentially value-destroying implicit conversions. In fact, compilers can detect and warn against some obviously dangerous conversions, such as floating to integral and long int to char. Howev er, general compile-time detection is impractical, so the programmer must be careful. When ‘‘being careful’’ isn’t enough, the programmer can insert explicit checks. For example:
+
+```cpp
+char checked_cast(int i)
+{
+    char c = i; // warning: not portable (§10.5.2.1)
+    if (i != c) throw std::runtime_error{"int−to−char check failed"};
+    return c;
+}
+
+void my_code(int i)
+{
+    char c = checked_cast(i);
+}
+```
+
+A more general technique for expressing checked conversions is presented in.
+
+To truncate in a way that is guaranteed to be portable requires the use of numeric_limits. In initializations, truncation can be avoided by using the {}-initializer notation.
+
+## Usual Arithmetic Conversions
+
+These conversions are performed on the operands of a binary operator to bring them to a common type, which is then used as the type of the result:
+
+1. If either operand is of type long double, the other is converted to long double.
+    * Otherwise, if either operand is double, the other is converted to double.
+    * Otherwise, if either operand is float, the other is converted to float.
+    * Otherwise, integral promotions (§10.5.1) are performed on both operands.
+
+2. Otherwise, if either operand is unsigned long long, the other is converted to unsigned long long.
+    * Otherwise, if one operand is a long long int and the other is an unsigned long int, then if a long long int can represent all the values of an unsigned long int, the unsigned long int is converted to a long long int; otherwise, both operands are converted to unsigned long long int. Otherwise, if either operand is unsigned long long, the other is converted to unsigned long long.
+    * Otherwise, if one operand is a long int and the other is an unsigned int, then if a long int can represent all the values of an unsigned int, the unsigned int is converted to a long int; otherwise, both operands are converted to unsigned long int.
+    * Otherwise, if either operand is long, the other is converted to long.
+    * Otherwise, if either operand is unsigned, the other is converted to unsigned.
+    * Otherwise, both operands are int.
+
+These rules make the result of converting an unsigned integer to a signed one of possibly larger size implementation-defined. That is yet another reason to avoid mixing unsigned and signed integers
+
+## Advice
+
+1. Prefer the standard library to other libraries and to *handcrafted code*; 
+2. Use character-level input only when you have to;
+3. When reading, always consider ill-formed input;
+4. Prefer suitable abstractions (classes, algorithms, etc.) to direct use of language features (e.g., ints, statements);
+5. Avoid complicated expressions;
+6. If in doubt about operator precedence, parenthesize;
+7. Avoid expressions with undefined order of evaluation;
+8. Avoid narrowing conversions;
+9. Define symbolic constants to avoid *magic constants*;
+10. Avoid narrowing conversions;
