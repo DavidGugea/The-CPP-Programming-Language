@@ -1,0 +1,4 @@
+﻿Lists.obj : error LNK2019: unresolved external symbol "void __cdecl f(struct S)" (?f@@YAXUS@@@Z) referenced in function "int __cdecl main4(void)" (?main4@@YAHXZ)
+Lists.obj : error LNK2019: unresolved external symbol "void __cdecl g(struct S)" (?g@@YAXUS@@@Z) referenced in function "int __cdecl main4(void)" (?main4@@YAHXZ)
+Lists.obj : error LNK2019: unresolved external symbol "void __cdecl g(struct SS)" (?g@@YAXUSS@@@Z) referenced in function "int __cdecl main4(void)" (?main4@@YAHXZ)
+D:\Coding\SectionD\CPP\The-CPP-Programming-Language\SectionII\Chapter11\Lists\Debug\Lists.exe : fatal error LNK1120: 3 unresolved externals
